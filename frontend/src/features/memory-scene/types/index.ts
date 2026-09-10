@@ -31,3 +31,19 @@ export type MemorySceneLevel = {
   objects: MemorySceneObject[];
   questions: MemorySceneQuestion[];
 };
+
+export type MemorySceneQuestionResult = {
+  questionIndex: number;
+  questionType: MemorySceneQuestionType;
+  isCorrect: boolean;
+};
+
+export type MemorySceneSessionResult = {
+  levelId: string;
+  level: number;
+  levelTitle: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  accuracy: number;
+  questionResults: MemorySceneQuestionResult[];
+};

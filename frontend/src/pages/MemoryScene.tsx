@@ -7,7 +7,11 @@ import {
   level5Scene,
 } from "../features/memory-scene/data";
 import { createMemorySceneSession } from "../features/memory-scene/lib/randomize";
-import type { MemorySceneLevel } from "../features/memory-scene/types";
+import type {
+  MemorySceneLevel,
+  MemorySceneQuestionResult,
+  MemorySceneSessionResult,
+} from "../features/memory-scene/types";
 
 const levels: MemorySceneLevel[] = [
   level1Scene,
@@ -30,14 +34,18 @@ export default function MemoryScene() {
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(
       null,
   );
+  const [questionResults, setQuestionResults] = useState<
+      MemorySceneQuestionResult[]
+  >([]);
+  const [sessionResult, setSessionResult] =
+      useState<MemorySceneSessionResult | null>(null);
 
   const currentLevel = session.level;
   const questions = session.questions;
 
   const sceneVisible = started && showScene;
 
-  const finished =
-      currentQuestion >= questions.length;
+  const finished = currentQuestion >= questions.length;
 
   const questionVisible =
       started && !showScene && !answered && !finished;
@@ -50,11 +58,52 @@ export default function MemoryScene() {
       setScore((current) => current + 1);
     }
 
+    setQuestionResults((current) => [
+      ...current,
+      {
+        questionIndex: currentQuestion,
+        questionType: question.type,
+        isCorrect,
+      },
+    ]);
+
     setLastAnswerCorrect(isCorrect);
     setAnswered(true);
   };
 
   const handleNextQuestion = () => {
+    const hasRecordedAnswer = questionResults.some(
+        (result) => result.questionIndex === currentQuestion,
+    );
+
+    if (!hasRecordedAnswer) {
+      return;
+    }
+
+    if (currentQuestion === questions.length - 1) {
+      const correctAnswers =
+          questionResults.filter((result) => result.isCorrect).length;
+
+      const totalQuestions = questions.length;
+
+      const accuracy =
+          totalQuestions > 0
+              ? Math.round((correctAnswers / totalQuestions) * 100)
+              : 0;
+
+      const result: MemorySceneSessionResult = {
+        levelId: currentLevel.id,
+        level: currentLevel.level,
+        levelTitle: currentLevel.title,
+        totalQuestions,
+        correctAnswers,
+        accuracy,
+        questionResults,
+      };
+
+      setSessionResult(result);
+    }
+
     setCurrentQuestion((current) => current + 1);
     setAnswered(false);
     setLastAnswerCorrect(null);
@@ -74,6 +123,8 @@ export default function MemoryScene() {
     setScore(0);
     setAnswered(false);
     setLastAnswerCorrect(null);
+    setQuestionResults([]);
+    setSessionResult(null);
   };
 
   const startNextLevel = () => {
@@ -129,17 +180,22 @@ export default function MemoryScene() {
           ) : finished ? (
               <section className="result-card">
                 <div className="result-icon">
-                  {score === questions.length ? "🏆" : "🌟"}
+                  {sessionResult?.accuracy === 100 ? "🏆" : "🌟"}
                 </div>
 
                 <h2>مرحله تمام شد!</h2>
 
                 <p>
-                  امتیاز تو: {score} از {questions.length}
+                  امتیاز تو: {sessionResult?.correctAnswers ?? score} از{" "}
+                  {sessionResult?.totalQuestions ?? questions.length}
                 </p>
 
                 <p>
-                  {score === questions.length
+                  دقت پاسخ‌ها: {sessionResult?.accuracy ?? 0}٪
+                </p>
+
+                <p>
+                  {sessionResult?.accuracy === 100
                       ? "عالی بود! همه‌ی پاسخ‌ها درست بودند."
                       : "آفرین! با تمرین می‌توانی بهتر هم بشوی."}
                 </p>
